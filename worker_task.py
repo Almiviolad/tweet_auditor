@@ -1,0 +1,16 @@
+from celery import Celery
+import os
+import time
+
+REDIS_URL = os .getenv("REDIS_URL",  "redis://localhost:6379/0")
+celery_app = Celery("tweet_audit_worker",
+broker=REDIS_URL,  backend=REDIS_URL)
+
+@celery_app.task(name="task.analyse_tweet")
+def analyse_tweet(tweet_data, criteria, audit_job_id):
+	"""A celery task to  run tweet analysis in the background"""
+	tweet_id = tweet_data.get("tweet").get("id_str")
+	#run analysis here
+	time.sleep(3)
+	print(f"[{os.getpid()} - worker] Job {audit_job_id} analysed tweet: {tweet_id}")
+	return {"id": tweet_id, "deleted": False, "reason": "TBD"}

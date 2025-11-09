@@ -1,22 +1,18 @@
-import ijson
-import json
-from typing import Dict, List, Generator, Any
+import time
+from fastapi import FastAPI
+from helper import process_json_file
+from worker_task import analyse_tweet
 
-def process_json_file(filename:str, prefix:str = 'item') -> Generator[Dict[str, any]]:
-	try:
-		with open(filename, 'rb') as file:
-			yield from ijson.items(file, prefix)
-	
-	except FileNotFoundError as e:
-		print(f"ERROR: file not found at {filename}")
-	except ijson.JSONError as e:
-		print(f"ERROR: JSON parsing failed {e}")
+app = FastAPI(name="tweet_audit")
 
-
-filename = "large_tweet_archive_50MB.json"
-JSON_PREFIX = "item"
-
-for tweet in process_json_file(filename, JSON_PREFIX):
-	tweet_id = tweet.get("tweet").get("")
-	tweet_text = tweet.get('tweet', "Malformed tweet for tweet {")
-	tweet_text = tweet.get("tweet", "Malformed tweet").get("full_text", "No text found for tweet{tweet.get")
+@app.post("/start_audit")
+async def start_audit(criteria: dict):
+	audit_job_id = "AUDIT-" + str(int(time.time()))
+	task_ids = []
+	filename = "large_tweet_archive_50MB.json"
+	JSON_PREFIX = "item"
+	for tweet in process_json_file(filename, JSON_PREFIX):
+		result = analyse_tweet.delay(tweet, criteria, audit_job_id)
+		task_ids.append(result.id)
+		
+		return {"status": "Job queuer successfully",  "job_id": audit_job_id, "task_count": len(task_ids)}
